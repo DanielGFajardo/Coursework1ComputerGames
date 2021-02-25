@@ -57,8 +57,10 @@ public class ButtonBehaviour : MonoBehaviour
                  door.conditionClose=false;
              }
              if(buttonKind==2){
-                 door.conditionClose=true;
-                 door.conditionOpen=false;
+                 if(level==1){
+                    door.conditionClose=true;
+                    door.conditionOpen=false;
+                 }
              }
          }
      }

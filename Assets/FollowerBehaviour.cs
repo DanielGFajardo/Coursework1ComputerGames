@@ -19,10 +19,10 @@ public class FollowerBehaviour: MonoBehaviour
     {
         transform.position=toFollow.transform.position;
          if (Input.GetKey ("e")) {
-             transform.Rotate(0,-1,0);
+             transform.Rotate(0,-1.5f,0);
          }
          if (Input.GetKey ("r")) {
-             transform.Rotate(0,1,0);
+             transform.Rotate(0,1.5f,0);
          }
     }
 }

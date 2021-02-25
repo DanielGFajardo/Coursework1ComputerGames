@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
+
 public class CylindricalBot : MonoBehaviour
 {
     public Rigidbody body;
     public bool Leader=false;
+    public Text info;
     public int level;
     private int destPoint = 0;
     public bool touched = false;
@@ -46,10 +49,6 @@ public class CylindricalBot : MonoBehaviour
         BlueCube= GameObject.Find("BlueCube");
         RedCube = GameObject.Find("RedCube");
         YellowCube = GameObject.Find("YellowCube");
-        RedActivated = GameObject.Find("ActivatedButtonRed");
-        BlueActivated= GameObject.Find("ActivatedButtonBlue");
-        YellowActivated = GameObject.Find("ActivatedButtonYellow");
-        GreenActivated= GameObject.Find("ActivatedButtonGreen");
 
         destinations = new [] {RedCircle, BlueCircle, YellowCircle, GreenCircle}; 
         textures = new [] {red, blue, yellow, green}; 
@@ -71,11 +70,14 @@ public class CylindricalBot : MonoBehaviour
     void Update()
     {
         if(!Leader){
-            if(!goAwayfromOthers()){
-                Vector3 target=getTrajectory();
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(target - transform.position), rotationSpeed * Time.deltaTime);
-                transform.position += transform.forward * Time.deltaTime * moveSpeed * 0.3f ;
+            Vector3 target=getTrajectory();
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(target - transform.position), rotationSpeed * Time.deltaTime);
+            Vector3 possiblePosition = transform.position + transform.forward * Time.deltaTime * moveSpeed * 0.3f ;
+            int close = othersTooClose(possiblePosition);
+            if(close==3) {
+                transform.position += transform.forward * Time.deltaTime * moveSpeed * 0.4f ;
             }
+            
                 
         }
         
@@ -84,20 +86,23 @@ public class CylindricalBot : MonoBehaviour
                 GotoNextPoint();
         
         }
-    bool goAwayfromOthers(){
-        Collider[] nearby = Physics.OverlapSphere(transform.position, 20);
+    int othersTooClose(Vector3 position){ //3 is for no one close but leader, 2 for close but not too much and 1 for too close
+        Collider[] nearby = Physics.OverlapBox((position+ transform.forward * 1) ,new Vector3(1,1,1.5f),transform.rotation);
             for (var i = 0; i < nearby.Length; i++)
             {
-                if(nearby[i].gameObject.tag=="Bot"){
+                if(nearby[i].gameObject.tag=="Bot"&&!(nearby[i].gameObject.transform.position==transform.position)){
                     if(!nearby[i].gameObject.GetComponent<CylindricalBot>().Leader){
                         Debug.Log(1);
-                        return true;
+                        return 2;
                     }
-                    return false;
                 }
-                return false;
             }
-            return false;
+        return 3;
+    }
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawCube((transform.position+ transform.forward * 1), new Vector3(1,1,1.5f));
     }
     void GotoNextPoint() {
             // Returns if no points have been set up
@@ -131,17 +136,17 @@ public class CylindricalBot : MonoBehaviour
         if(collision.gameObject.tag=="Bot"){
             if (collision.gameObject.GetComponent<CylindricalBot>().Leader && !Leader)
             {
-                touched=false;
-                collision.gameObject.GetComponent<CylindricalBot>().touched=false;
+                collision.gameObject.GetComponent<NavMeshAgent>().isStopped = true;
                 collision.gameObject.GetComponent<CylindricalBot>().Leader=false;
                 collision.gameObject.GetComponent<Renderer> ().material.mainTexture = grey;
                 collision.gameObject.GetComponent<Rigidbody>().velocity= Vector3.zero;
+                collision.gameObject.GetComponent<Rigidbody>().angularVelocity= Vector3.zero;
                 int randomRespawn = Random.Range(0, 4);
-                body.velocity = Vector3.zero;
                 transform.position= (destinations[randomRespawn].transform.position); 
+                body.velocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
                 destPoint=((randomRespawn+1)%destinations.Length);
                 GetComponent<Renderer> ().material.mainTexture = textures[destPoint];
-                collision.gameObject.GetComponent<NavMeshAgent>().isStopped = true;
                 Leader=true;
                 GetComponent<NavMeshAgent>().isStopped = false;
                 GotoNextPoint();
@@ -155,45 +160,25 @@ public class CylindricalBot : MonoBehaviour
                     if(!(button.GetComponent<Renderer>().material.mainTexture == textures[i]))
                         completed=false;
                 }
-                if(completed)
+                if(completed){
                     door.conditionOpen=true;
+                    StartCoroutine(DoorOpened());
+                }
                 for(int i = 0; i<textures.Length;i++){
                     Texture texture = textures[i];
                     if(GetComponent<Renderer>().material.mainTexture == texture){
                         buttons[i].GetComponent<Renderer> ().material.mainTexture = texture;
                     }
                 }
-            }else if(level==2 && !touched){
-                touched=true;
-                int toComplete=-1;
-                for(int i=0;i<confirmationButtons.Length;i++){
-                    GameObject button = confirmationButtons[i];
-                    if(!(button.GetComponent<Renderer>().material.mainTexture == green)&&toComplete==-1)
-                        toComplete=i;
-                }
-                for(int i = 0; i<textures.Length;i++){
-                    Texture texture = textures[i];
-                    if(GetComponent<Renderer>().material.mainTexture == texture){
-                        if(toComplete==i){
-                            confirmationButtons[i].GetComponent<Renderer> ().material.mainTexture = green;
-                        }else{
-                            for(int a=0;a<confirmationButtons.Length;a++){
-                                GameObject button = confirmationButtons[a];
-                                button.GetComponent<Renderer>().material.mainTexture = grey;
-                            }
-                        }
-                    }
-                }
-                bool completed = true;
-                for(int i=0;i<confirmationButtons.Length;i++){
-                    GameObject button = confirmationButtons[i];
-                    if(!(button.GetComponent<Renderer>().material.mainTexture == green))
-                        completed=false;
-                }
-                if(completed)
-                    door.conditionOpen=true;
             }
         }
          
+        IEnumerator DoorOpened(){
+        int time=2;
+        info.color=Color.black;
+        info.text = "The door has been opened!";
+        yield return new WaitForSeconds(time+1);
+        info.text = "";
+    }
     }
 }
