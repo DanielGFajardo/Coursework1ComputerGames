@@ -34,7 +34,7 @@ public class PlayerBehaviour : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         body = GetComponent<Rigidbody>(); //getting the rigid body element of the object
         //getting the transform of the main camera
-        //StartCoroutine(InitialInfo());
+        StartCoroutine(InitialInfo());
     }
 
     void Update() {
